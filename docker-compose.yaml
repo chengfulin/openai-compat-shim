@@ -1,0 +1,11 @@
+services:
+  shim:
+    build: .
+    image: openai-compat-shim:0.1.0
+    container_name: openai-compat-shim
+    env_file:
+      - .env
+    ports:
+      # host:container
+      - "30899:8000"
+    restart: unless-stopped
