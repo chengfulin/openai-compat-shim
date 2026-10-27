@@ -8,7 +8,8 @@ type ``json_schema``), plus GET /v1/models.
 Requests are forwarded to the upstream server with the model name rewritten
 through the alias table (``gemma4-26b`` -> ``Gemma-4-26B-A4B`` by default), and
 the client-facing name is written back into the response so callers keep seeing
-the name they asked for.
+the name they asked for. The bearer token is mapped the same way through the
+API key table, so callers can keep using the key of the target environment.
 """
 
 from __future__ import annotations
@@ -94,9 +95,17 @@ def _error(status: int, message: str, err_type: str = "invalid_request_error") -
 
 def _forward_headers(request: Request, settings: Settings) -> dict[str, str]:
     headers = {
-        k: v for k, v in request.headers.items() if k.lower() not in _SKIP_REQUEST_HEADERS
+        k: v
+        for k, v in request.headers.items()
+        if k.lower() not in _SKIP_REQUEST_HEADERS and k.lower() != "authorization"
     }
-    if "authorization" not in {k.lower() for k in headers} and settings.upstream_api_key:
+    auth = request.headers.get("authorization")
+    if auth:
+        scheme, _, token = auth.partition(" ")
+        if scheme.lower() == "bearer" and token:
+            auth = f"Bearer {settings.resolve_api_key(token.strip())}"
+        headers["Authorization"] = auth
+    elif settings.upstream_api_key:
         headers["Authorization"] = f"Bearer {settings.upstream_api_key}"
     return headers
 

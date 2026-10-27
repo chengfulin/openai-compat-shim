@@ -83,6 +83,51 @@ async def test_upstream_api_key_fills_in_when_caller_sends_none(
     assert recorder.last_headers["authorization"] == "Bearer env-key"
 
 
+async def test_mapped_api_key_is_rewritten_upstream(recorder: UpstreamRecorder) -> None:
+    app = create_app(
+        Settings(
+            upstream_base_url="http://upstream",
+            api_key_map={"customer-key": "internal-key"},
+        )
+    )
+    app.state.upstream = httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=build_upstream(recorder)), base_url="http://upstream"
+    )
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://shim",
+        headers={"Authorization": "Bearer customer-key"},
+    ) as c:
+        resp = await c.post(
+            "/v1/chat/completions",
+            json={"model": "gemma4-26b", "messages": [{"role": "user", "content": "hi"}]},
+        )
+    assert resp.status_code == 200
+    assert recorder.last_headers["authorization"] == "Bearer internal-key"
+
+
+async def test_unmapped_api_key_passes_through_untouched(recorder: UpstreamRecorder) -> None:
+    app = create_app(
+        Settings(
+            upstream_base_url="http://upstream",
+            api_key_map={"customer-key": "internal-key"},
+        )
+    )
+    app.state.upstream = httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=build_upstream(recorder)), base_url="http://upstream"
+    )
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://shim",
+        headers={"Authorization": "Bearer other-key"},
+    ) as c:
+        await c.post(
+            "/v1/chat/completions",
+            json={"model": "gemma4-26b", "messages": [{"role": "user", "content": "hi"}]},
+        )
+    assert recorder.last_headers["authorization"] == "Bearer other-key"
+
+
 async def test_upstream_401_is_passed_through(shim: FastAPI) -> None:
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=shim), base_url="http://shim"

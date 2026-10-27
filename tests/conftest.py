@@ -1,4 +1,4 @@
-"""A stand-in for the real upstream at http://192.168.x.x:8000.
+"""A stand-in for the real upstream OpenAI-compatible server (e.g. vLLM).
 
 It mimics the parts of that server the shim touches: bearer auth, a model
 listing, and chat completions (streaming and not), including honouring a
