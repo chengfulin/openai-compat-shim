@@ -2,6 +2,12 @@
 
 > **實驗性質(Experimental)**:本專案為開發測試用的小工具,未經正式環境驗證,
 > 介面與行為可能隨時調整,請勿直接用於正式環境。
+>
+> **適用範圍**:開發測試時,需要讓系統沿用客戶環境的 model name 與 API key,
+> 而**上游只有一個 vLLM**(或其他 OpenAI 相容服務)的情境。
+> 若要接多個上游、做 fallback、virtual key 管理、用量統計或限流,或要當成長期
+> 使用的 gateway,請改用 [LiteLLM Proxy](https://docs.litellm.ai/docs/simple_proxy)
+> 等成熟方案,不建議在這個 repo 上擴充。
 
 一層 OpenAI 相容的反向代理,擋在上游 OpenAI 相容服務(例如自建的 vLLM,
 以下以 `http://192.168.x.x:8000` 示意)前面。
